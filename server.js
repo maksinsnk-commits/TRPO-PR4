@@ -10,7 +10,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('.'));
 
-// Инициализация БД
 const db = new sqlite3.Database('./maintenance.db', (err) => {
     if (err) {
         console.error('Ошибка подключения к БД:', err.message);
@@ -20,10 +19,8 @@ const db = new sqlite3.Database('./maintenance.db', (err) => {
     }
 });
 
-// Функция инициализации базы данных
 function initializeDatabase() {
     db.serialize(() => {
-        // Таблица клиентов
         db.run(`CREATE TABLE IF NOT EXISTS clients (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -34,7 +31,6 @@ function initializeDatabase() {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 
-        // Таблица оборудования
         db.run(`CREATE TABLE IF NOT EXISTS equipment (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -50,7 +46,6 @@ function initializeDatabase() {
             FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE CASCADE
         )`);
 
-        // Таблица запчастей
         db.run(`CREATE TABLE IF NOT EXISTS parts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -63,7 +58,6 @@ function initializeDatabase() {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 
-        // Таблица обслуживания
         db.run(`CREATE TABLE IF NOT EXISTS maintenance (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             equipment_id INTEGER,
@@ -83,7 +77,6 @@ function initializeDatabase() {
             FOREIGN KEY (equipment_id) REFERENCES equipment (id) ON DELETE CASCADE
         )`);
 
-        // Таблица заявок на обслуживание
         db.run(`CREATE TABLE IF NOT EXISTS service_requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             client_name TEXT NOT NULL,
@@ -100,7 +93,6 @@ function initializeDatabase() {
             solution_description TEXT
         )`);
 
-        // Таблица отчетов
         db.run(`CREATE TABLE IF NOT EXISTS reports (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -112,7 +104,6 @@ function initializeDatabase() {
             file_path TEXT
         )`);
 
-        // Проверяем, есть ли уже тестовые данные
         db.get("SELECT COUNT(*) as count FROM clients", [], (err, row) => {
             if (err) {
                 console.error('Ошибка проверки данных:', err);
@@ -129,13 +120,11 @@ function initializeDatabase() {
     });
 }
 
-// Функция для добавления тестовых данных
 function insertTestData() {
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
     
-    // Тестовые данные клиентов
     const clientsData = [
         ['Завод Металл', 'Иванов А.С.', '+7-999-123-45-67', 'ivanov@zavodmetal.ru', 'ул. Промышленная, 15'],
         ['Завод Деталь', 'Петрова М.И.', '+7-999-765-43-21', 'petrova@zavoddetal.ru', 'ул. Заводская, 28'],
@@ -162,7 +151,6 @@ function insertTestData() {
         });
     };
 
-    // Тестовые данные оборудования
     const equipmentData = [
         ['Токарный станок', 'CNC-100', 'TS001', 'Цех №1', 1, '2023-01-15', '2024-10-01', '2024-12-01'],
         ['Фрезерный станок', 'FM-200', 'FS001', 'Цех №2', 2, '2023-03-20', '2024-10-15', '2025-01-15'],
@@ -190,7 +178,6 @@ function insertTestData() {
         });
     };
 
-    // Запчасти
     const partsData = [
         ['Подшипник радиальный', 'BEARING-001', 15, 5, 1200.50, 'ООО ПодшипникСервис', 'механика'],
         ['Ремень ГРМ', 'BELT-002', 8, 10, 850.75, 'ООО РеменьПро', 'механика'],
@@ -219,7 +206,6 @@ function insertTestData() {
         });
     };
 
-    // Обслуживание (добавляем завершенные работы в текущем месяце)
     const maintenanceData = [
         [1, `${currentYear}-${currentMonth.toString().padStart(2, '0')}-05`, 'регламентное', 'Плановое ТО станка', 5000.00, 1200.50, 'Сергеев П.К.', 'completed', 4, 'medium', 4.5],
         [2, `${currentYear}-${currentMonth.toString().padStart(2, '0')}-10`, 'внеплановое', 'Замена датчика температуры', 3000.00, 2100.00, 'Козлов М.С.', 'completed', 3, 'high', 3.5],
@@ -248,7 +234,6 @@ function insertTestData() {
         });
     };
 
-    // Тестовые заявки
     const serviceRequestsData = [
         ['Завод Металл', 'Токарный станок', 'CNC-100', 'TS001', 'Не включается двигатель, при запуске слышны щелчки реле', 'Иванов А.С.', '+7-999-123-45-67', 'высокая'],
         ['Завод Деталь', 'Фрезерный станок', 'FM-200', 'FS001', 'Сильный шум и вибрация при работе, требуется диагностика', 'Петрова М.И.', '+7-999-765-43-21', 'средняя'],
@@ -275,7 +260,6 @@ function insertTestData() {
         });
     };
 
-    // Последовательное выполнение вставки данных
     insertClients()
         .then(() => insertEquipment())
         .then(() => insertParts())
@@ -289,9 +273,6 @@ function insertTestData() {
         });
 }
 
-// API маршруты
-
-// План работ на ближайшие 7 дней
 app.get('/api/work-plan', (req, res) => {
     const query = `
         SELECT 
@@ -328,7 +309,6 @@ app.get('/api/work-plan', (req, res) => {
     });
 });
 
-// Запчасти для пополнения (низкий запас)
 app.get('/api/low-stock-parts', (req, res) => {
     const query = `
         SELECT 
@@ -358,7 +338,6 @@ app.get('/api/low-stock-parts', (req, res) => {
     });
 });
 
-// Получить все заявки на обслуживание
 app.get('/api/service-requests', (req, res) => {
     const query = `
         SELECT * FROM service_requests 
@@ -375,7 +354,6 @@ app.get('/api/service-requests', (req, res) => {
     });
 });
 
-// Получить все оборудование с информацией о клиентах
 app.get('/api/equipment', (req, res) => {
     const query = `
         SELECT 
@@ -398,7 +376,6 @@ app.get('/api/equipment', (req, res) => {
     });
 });
 
-// Получить все обслуживание с детальной информацией
 app.get('/api/maintenance', (req, res) => {
     const query = `
         SELECT 
@@ -423,7 +400,6 @@ app.get('/api/maintenance', (req, res) => {
     });
 });
 
-// Получить все запчасти
 app.get('/api/parts', (req, res) => {
     db.all("SELECT * FROM parts ORDER BY name", [], (err, rows) => {
         if (err) {
@@ -435,7 +411,6 @@ app.get('/api/parts', (req, res) => {
     });
 });
 
-// Получить всех клиентов
 app.get('/api/clients', (req, res) => {
     db.all("SELECT * FROM clients ORDER BY name", [], (err, rows) => {
         if (err) {
@@ -447,7 +422,6 @@ app.get('/api/clients', (req, res) => {
     });
 });
 
-// CRUD операции для клиентов
 app.post('/api/clients', (req, res) => {
     const { name, contact_person, phone, email, address } = req.body;
     
@@ -504,7 +478,6 @@ app.delete('/api/clients/:id', (req, res) => {
     });
 });
 
-// CRUD операции для оборудования
 app.post('/api/equipment', (req, res) => {
     const { name, model, serial_number, location, client_id, installation_date } = req.body;
     
@@ -562,7 +535,6 @@ app.delete('/api/equipment/:id', (req, res) => {
     });
 });
 
-// CRUD операции для запчастей
 app.post('/api/parts', (req, res) => {
     const { name, part_number, quantity, min_quantity, price, supplier, category } = req.body;
     
@@ -620,7 +592,6 @@ app.delete('/api/parts/:id', (req, res) => {
     });
 });
 
-// CRUD операции для обслуживания
 app.post('/api/maintenance', (req, res) => {
     const { equipment_id, maintenance_date, type, description, work_cost, parts_cost, technician, duration_hours, difficulty } = req.body;
     
@@ -639,6 +610,63 @@ app.post('/api/maintenance', (req, res) => {
             return;
         }
         res.json({ id: this.lastID, message: 'Работа добавлена' });
+    });
+});
+
+app.post('/api/maintenance/completed', (req, res) => {
+    const { equipment_id, maintenance_date, type, description, work_cost, parts_cost, technician, duration_hours, difficulty, actual_hours, parts_used } = req.body;
+    
+    console.log('Получены данные выполненной работы:', req.body);
+    
+    if (!equipment_id || !maintenance_date || !type || !description || !duration_hours || !actual_hours || !technician) {
+        console.error('Не заполнены обязательные поля:', {
+            equipment_id, maintenance_date, type, description, duration_hours, actual_hours, technician
+        });
+        return res.status(400).json({ error: 'Не заполнены обязательные поля' });
+    }
+    
+    const endTime = new Date().toISOString();
+    const created_at = new Date().toISOString();
+    
+    const safeDescription = description.length > 500 ? description.substring(0, 500) : description;
+    
+    const query = `INSERT INTO maintenance 
+        (equipment_id, maintenance_date, type, description, work_cost, parts_cost, technician, 
+         status, duration_hours, difficulty, actual_hours, end_time, created_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, ?, ?, ?)`;
+    
+    db.run(query, [
+        equipment_id, 
+        maintenance_date, 
+        type, 
+        safeDescription, 
+        work_cost || 0, 
+        parts_cost || 0, 
+        technician,
+        duration_hours, 
+        difficulty || 'medium', 
+        actual_hours, 
+        endTime,
+        created_at
+    ], function(err) {
+        if (err) {
+            console.error('Ошибка добавления выполненной работы:', err);
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        console.log('Выполненная работа успешно добавлена, ID:', this.lastID);
+        res.json({ 
+            id: this.lastID, 
+            message: 'Выполненная работа успешно добавлена',
+            details: {
+                equipment_id,
+                maintenance_date,
+                type,
+                technician,
+                work_cost,
+                parts_cost
+            }
+        });
     });
 });
 
@@ -678,7 +706,6 @@ app.delete('/api/maintenance/:id', (req, res) => {
     });
 });
 
-// Запустить работу (старт таймера)
 app.put('/api/maintenance/:id/start', (req, res) => {
     const { id } = req.params;
     const startTime = new Date().toISOString();
@@ -693,12 +720,10 @@ app.put('/api/maintenance/:id/start', (req, res) => {
     });
 });
 
-// Завершить работу (стоп таймера)
 app.put('/api/maintenance/:id/complete', (req, res) => {
     const { id } = req.params;
     const endTime = new Date().toISOString();
     
-    // Сначала получаем данные о работе
     db.get("SELECT start_time, duration_hours FROM maintenance WHERE id = ?", [id], (err, row) => {
         if (err) {
             console.error('Ошибка получения данных работы:', err);
@@ -710,8 +735,8 @@ app.put('/api/maintenance/:id/complete', (req, res) => {
         if (row.start_time) {
             const start = new Date(row.start_time);
             const end = new Date(endTime);
-            actualHours = (end - start) / (1000 * 60 * 60); // Разница в часах
-            actualHours = Math.round(actualHours * 10) / 10; // Округляем до 1 десятичного знака
+            actualHours = (end - start) / (1000 * 60 * 60);
+            actualHours = Math.round(actualHours * 10) / 10;
         }
         
         db.run("UPDATE maintenance SET end_time = ?, actual_hours = ?, status = 'completed' WHERE id = ?", 
@@ -730,7 +755,6 @@ app.put('/api/maintenance/:id/complete', (req, res) => {
     });
 });
 
-// Операции для заявок
 app.post('/api/service-requests', (req, res) => {
     const { 
         client_name, 
@@ -810,7 +834,6 @@ app.delete('/api/service-requests/:id', (req, res) => {
     });
 });
 
-// Отчеты
 app.get('/api/reports/maintenance', (req, res) => {
     const { startDate, endDate } = req.query;
     
@@ -851,7 +874,6 @@ app.get('/api/reports/maintenance', (req, res) => {
     });
 });
 
-// Сохранить отчет
 app.post('/api/reports', (req, res) => {
     const { name, type, period_start, period_end, data } = req.body;
     
@@ -873,7 +895,6 @@ app.post('/api/reports', (req, res) => {
     });
 });
 
-// Получить все отчеты
 app.get('/api/reports', (req, res) => {
     db.all("SELECT * FROM reports ORDER BY created_date DESC", [], (err, rows) => {
         if (err) {
@@ -881,7 +902,6 @@ app.get('/api/reports', (req, res) => {
             res.status(500).json({ error: err.message });
             return;
         }
-        // Парсим JSON данные
         rows.forEach(row => {
             if (row.data) {
                 try {
@@ -896,7 +916,6 @@ app.get('/api/reports', (req, res) => {
     });
 });
 
-// Удалить отчет
 app.delete('/api/reports/:id', (req, res) => {
     const { id } = req.params;
     
@@ -910,7 +929,6 @@ app.delete('/api/reports/:id', (req, res) => {
     });
 });
 
-// Скачать отчет в формате текста
 app.get('/api/reports/:id/download', (req, res) => {
     const { id } = req.params;
     
@@ -942,7 +960,6 @@ app.get('/api/reports/:id/download', (req, res) => {
                     reportContent += `---\n`;
                 });
                 
-                // Добавляем итоги
                 const totalCost = data.reduce((sum, item) => sum + (item.total_cost || 0), 0);
                 reportContent += `\nИТОГО: ${data.length} работ, Общая стоимость: ${totalCost.toFixed(2)} руб.`;
             } catch (e) {
@@ -956,7 +973,6 @@ app.get('/api/reports/:id/download', (req, res) => {
     });
 });
 
-// Статистика для главной страницы
 app.get('/api/dashboard/stats', (req, res) => {
     const queries = {
         totalEquipment: "SELECT COUNT(*) as count FROM equipment",
@@ -1009,13 +1025,193 @@ app.get('/api/dashboard/stats', (req, res) => {
     });
 });
 
-// Стартовая страница
+app.get('/api/accounting/overview', (req, res) => {
+    const query = `
+        SELECT 
+            COUNT(*) as total_works,
+            COALESCE(SUM(work_cost), 0) as total_work_cost,
+            COALESCE(SUM(parts_cost), 0) as total_parts_cost,
+            COALESCE(SUM(work_cost + parts_cost), 0) as total_cost,
+            COALESCE(SUM(duration_hours), 0) as total_hours,
+            COALESCE(SUM(actual_hours), 0) as total_actual_hours,
+            CASE 
+                WHEN COUNT(*) > 0 THEN COALESCE(AVG(work_cost + parts_cost), 0)
+                ELSE 0 
+            END as avg_cost_per_work,
+            COUNT(DISTINCT equipment_id) as unique_equipment_serviced,
+            COUNT(DISTINCT technician) as technicians_involved
+        FROM maintenance 
+        WHERE status = 'completed'
+    `;
+
+    db.get(query, [], (err, row) => {
+        if (err) {
+            console.error('Ошибка получения учета:', err);
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json(row || {});
+    });
+});
+
+app.get('/api/accounting/monthly', (req, res) => {
+    const query = `
+        SELECT 
+            strftime('%Y-%m', maintenance_date) as month,
+            COUNT(*) as total_works,
+            COALESCE(SUM(work_cost), 0) as total_work_cost,
+            COALESCE(SUM(parts_cost), 0) as total_parts_cost,
+            COALESCE(SUM(work_cost + parts_cost), 0) as total_cost,
+            COALESCE(SUM(duration_hours), 0) as total_hours,
+            COALESCE(SUM(actual_hours), 0) as total_actual_hours
+        FROM maintenance 
+        WHERE status = 'completed'
+        GROUP BY strftime('%Y-%m', maintenance_date)
+        ORDER BY month DESC
+        LIMIT 12
+    `;
+
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            console.error('Ошибка получения месячной статистики:', err);
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json(rows || []);
+    });
+});
+
+app.get('/api/accounting/by-client', (req, res) => {
+    const query = `
+        SELECT 
+            c.name as client_name,
+            COUNT(m.id) as total_works,
+            COALESCE(SUM(m.work_cost), 0) as total_work_cost,
+            COALESCE(SUM(m.parts_cost), 0) as total_parts_cost,
+            COALESCE(SUM(m.work_cost + m.parts_cost), 0) as total_cost,
+            COALESCE(SUM(m.duration_hours), 0) as total_hours,
+            CASE 
+                WHEN COUNT(m.id) > 0 THEN COALESCE(AVG(m.work_cost + m.parts_cost), 0)
+                ELSE 0 
+            END as avg_cost_per_work
+        FROM maintenance m
+        JOIN equipment e ON m.equipment_id = e.id
+        JOIN clients c ON e.client_id = c.id
+        WHERE m.status = 'completed'
+        GROUP BY c.id
+        ORDER BY total_cost DESC
+    `;
+
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            console.error('Ошибка получения учета по клиентам:', err);
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json(rows || []);
+    });
+});
+
+app.get('/api/accounting/by-equipment-type', (req, res) => {
+    const query = `
+        SELECT 
+            e.name as equipment_name,
+            e.model,
+            COUNT(m.id) as total_works,
+            COALESCE(SUM(m.work_cost), 0) as total_work_cost,
+            COALESCE(SUM(m.parts_cost), 0) as total_parts_cost,
+            COALESCE(SUM(m.work_cost + m.parts_cost), 0) as total_cost,
+            COALESCE(SUM(m.duration_hours), 0) as total_hours,
+            CASE 
+                WHEN COUNT(m.id) > 0 THEN COALESCE(AVG(m.work_cost + m.parts_cost), 0)
+                ELSE 0 
+            END as avg_cost_per_work
+        FROM maintenance m
+        JOIN equipment e ON m.equipment_id = e.id
+        WHERE m.status = 'completed'
+        GROUP BY e.id
+        ORDER BY total_cost DESC
+        LIMIT 10
+    `;
+
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            console.error('Ошибка получения учета по оборудованию:', err);
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json(rows || []);
+    });
+});
+
+app.get('/api/accounting/material-costs', (req, res) => {
+    const query = `
+        SELECT 
+            COALESCE(SUM(parts_cost), 0) as total_material_cost,
+            CASE 
+                WHEN COUNT(*) > 0 THEN COALESCE(AVG(parts_cost), 0)
+                ELSE 0 
+            END as avg_material_cost_per_work,
+            COUNT(CASE WHEN parts_cost > 0 THEN 1 END) as works_with_materials,
+            COUNT(*) as total_works,
+            CASE 
+                WHEN COUNT(*) > 0 THEN (COUNT(CASE WHEN parts_cost > 0 THEN 1 END) * 100.0 / COUNT(*))
+                ELSE 0 
+            END as percent_with_materials
+        FROM maintenance 
+        WHERE status = 'completed'
+    `;
+
+    db.get(query, [], (err, row) => {
+        if (err) {
+            console.error('Ошибка получения учета материалов:', err);
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json(row || {});
+    });
+});
+
+app.get('/api/accounting/technician-efficiency', (req, res) => {
+    const query = `
+        SELECT 
+            technician,
+            COUNT(*) as total_works,
+            COALESCE(SUM(work_cost + parts_cost), 0) as total_revenue,
+            CASE 
+                WHEN COUNT(*) > 0 THEN COALESCE(AVG(work_cost + parts_cost), 0)
+                ELSE 0 
+            END as avg_revenue_per_work,
+            COALESCE(SUM(duration_hours), 0) as total_planned_hours,
+            COALESCE(SUM(actual_hours), 0) as total_actual_hours,
+            CASE 
+                WHEN COALESCE(SUM(actual_hours), 0) > 0 
+                THEN COALESCE(SUM(duration_hours), 0) * 100.0 / COALESCE(SUM(actual_hours), 0)
+                ELSE 0 
+            END as efficiency_percentage
+        FROM maintenance 
+        WHERE status = 'completed' AND technician IS NOT NULL AND technician != ''
+        GROUP BY technician
+        ORDER BY total_revenue DESC
+    `;
+
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            console.error('Ошибка получения учета эффективности:', err);
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json(rows || []);
+    });
+});
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Запуск сервера
 app.listen(PORT, () => {
     console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
     console.log(`📊 API доступно по адресу http://localhost:3000/api`);
+    console.log(`💰 API учета доступно по адресу http://localhost:3000/api/accounting/*`);
+    console.log(`✅ API для добавления выполненной работы: POST http://localhost:3000/api/maintenance/completed`);
 });
